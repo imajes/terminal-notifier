@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 import Logging
 import TNCore
 
@@ -7,10 +8,82 @@ struct TN: AsyncParsableCommand {
   static var configuration = CommandConfiguration(
     commandName: "tn",
     abstract: "Post macOS notifications from the terminal.",
+    discussion: "Use modern subcommands (e.g. 'tn send') or legacy top-level flags (e.g. '-message', '-title').",
     version: VersionInfo.string,
     subcommands: [Send.self, ListCmd.self, Remove.self, Profiles.self, Doctor.self],
     helpNames: [.long, .short]
   )
+
+  /// Custom entry to rewrite legacy single-dash long flags (e.g. `-message`) into
+  /// their modern `--message` equivalents before ArgumentParser runs. Also handles
+  /// `-list ID` / `-remove ID` value shorthands and maps `-help`/`-version`.
+  static func main() async {
+    var args = CommandLine.arguments
+    // Early error for removed flags.
+    if args.contains("-ignoreDnD") {
+      fputs("error: '-ignoreDnD' was removed; use --interruption-level timeSensitive\n", stderr)
+      exit(2)
+    }
+
+    args = rewriteLegacy(args)
+    do {
+      var command = try Self.parseAsRoot(args)
+      try await command.run()
+    } catch let e as ExitCode {
+      // Propagate our explicit exit codes without extra noise.
+      exit(e.rawValue)
+    } catch {
+      // Unknown parser or runtime error → exit 1 by default.
+      fputs("error: \(error)\n", stderr)
+      exit(1)
+    }
+  }
+
+  /// Rewrites legacy single-dash long options to `--` form and shorthands.
+  private static func rewriteLegacy(_ argv: [String]) -> [String] {
+    guard argv.count > 1 else { return argv }
+    var out: [String] = [argv[0]]
+    var i = 1
+    while i < argv.count {
+      let tok = argv[i]
+
+      // Map `-help` / `-version` to the built-in flags.
+      if tok == "-help" { out.append("--help"); i += 1; continue }
+      if tok == "-version" { out.append("--version"); i += 1; continue }
+
+      // Shorthand: `-list <GROUP|ALL>` / `-remove <GROUP|ALL>` optionally take a value.
+      if tok == "-list" || tok == "-remove" {
+        out.append("--" + String(tok.dropFirst())) // -> --list / --remove
+        let next = (i + 1 < argv.count) ? argv[i + 1] : nil
+        if let n = next, !n.hasPrefix("-") {
+          // Treat trailing value as group selector.
+          out.append("--group"); out.append(n)
+          i += 2
+        } else {
+          i += 1
+        }
+        continue
+      }
+
+      // Single-dash long-like legacy flags to support: -message, -title, -subtitle, -sound,
+      // -group, -open, -execute, -activate, -contentImage, -sender
+      let legacyLongs: Set<String> = [
+        "message","title","subtitle","sound","group","open","execute","activate","contentImage","sender","wait"
+      ]
+      if tok.hasPrefix("-"), !tok.hasPrefix("--") {
+        let name = String(tok.dropFirst())
+        if legacyLongs.contains(name) {
+          out.append("--" + name)
+          i += 1
+          continue
+        }
+      }
+
+      out.append(tok)
+      i += 1
+    }
+    return out
+  }
 
   // Legacy compatibility: parse top-level flags and route to subcommands.
   @Option(name: .customLong("message"), help: "Notification body.")
@@ -140,7 +213,18 @@ struct Send: AsyncParsableCommand {
       body = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     guard let msg = body, !msg.isEmpty else {
+      fputs("error: message is required (use --message or pipe stdin)\n", stderr)
       throw ExitCode(2)
+    }
+
+    // Validate interruption level if provided
+    var level: InterruptionLevel = .active
+    if let s = interruption {
+      guard let parsed = InterruptionLevel(from: s) else {
+        fputs("error: invalid --interruption-level: \(s)\n", stderr)
+        throw ExitCode(2)
+      }
+      level = parsed
     }
 
     let payload = NotificationPayload(
@@ -154,7 +238,7 @@ struct Send: AsyncParsableCommand {
       activateBundleID: activate,
       contentImage: contentImage,
       senderProfile: sender,
-      interruptionLevel: InterruptionLevel(from: interruption) ?? .active,
+      interruptionLevel: level,
       waitSeconds: wait
     )
 
