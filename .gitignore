@@ -1,0 +1,87 @@
+## Xcode & Swift
+
+# User-specific Xcode settings
+xcuserdata/
+
+# Build artifacts
+DerivedData/
+build/
+
+# Indexes & intermediate build files
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.xcscmblueprint
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# SwiftPM resolution cache
+Package.resolved
+# ^ If you want to commit resolved deps for reproducibility, remove above line
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+## Dependency Managers
+
+# CocoaPods
+Pods/
+# If you use Podfile.lock for reproducibility, remove it from here
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Accio
+Dependencies/
+.accio/
+
+## Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+## Other common macOS cruft
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files already present in iCloud
+*.icloud
+
+# Temporary & swap files
+*.swp
+*.swo
+*.tmp
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+
+# Logs
+*.log
+
+# Xcode Server / Continuous Integration
+integration*
+
+# Symbolicated & crash reports
+*.dSYM.zip
+*.dSYM
+
+# Core Data
+*.xccurrentversion
+
+# Generated docs
+docs/
+
+# Vim/Emacs backups
+*~
+
