@@ -40,7 +40,8 @@
 ## Commits & PRs
 
 - Use Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
-- PRs must pass CI, update docs/tests if behavior changes, and reference SPEC/step.
+- You MUST generate a commit for each atomic change. Use a meaningful commit message to describe it.
+- When a remote repo is enabled, PRs must pass CI, update docs/tests if behavior changes, and reference SPEC/step.
 
 ## External References
 
