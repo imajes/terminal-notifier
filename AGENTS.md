@@ -1,67 +1,67 @@
-# AGENTS
+# AGENTS.md — Repo Rules for Autonomous Agents
 
-Define the staged work your code generator should do. Each agent has inputs, outputs, and pass criteria.
+## Context
 
-## Agent 0 — Bootstrap
-**Do**
-- Create SwiftPM package with targets: `tn` (executable), `TNCore` (library).
-- Add `.gitignore`, `Makefile` with `build`, `release`, `test`.
-**Pass**: `swift build` + `swift test` compile locally.
+- SwiftPM repo (Swift 5.10+/6, macOS 13+).
+- **Package.swift**: manifest.
+- **Sources/tn**: CLI entry (`main.swift`) + subcommands.
+- **Sources/TNCore**: core engine/models.
+- **Tests/TNCoreTests**: Swift Testing tests.
+- **SPECIFICATION.md**: functional/technical requirements.
+- **AGENT_STEPS.md**: current build sequence.
 
-## Agent 1 — CLI & Compatibility Layer
-**Do**
-- Implement modern subcommands using `swift-argument-parser`: `send`, `list`, `remove`, `profiles`, `doctor`.
-- Implement **compat parser** that maps legacy top‑level flags to `send/list/remove` logic.
-- Stdin message fallback when `-message` omitted and stdin non‑TTY.
-**Pass**: `tn --help` shows both UX styles; parser tests green.
+### Useful commands
 
-## Agent 2 — Core Engine
-**Do**
-- `NotificationPayload` model + validation (title/subtitle/message, group, sound, interruptionLevel, actions, attachments).
-- URL validation; attachment fetching to temp file; size/type checks.
-- Group replacement semantics before posting.
-**Pass**: unit tests for validation and payload building.
+- `swift build` / `swift build -c release`
+- `swift run tn --help`
+- `swift test`
+- Example: `swift run tn send --message "Hello"` or legacy `swift run tn -message "Hello"`
 
-## Agent 3 — IPC protocol
-**Do**
-- Define framed JSON over UNIX domain socket: `SendRequest`, `ListRequest`, `RemoveRequest`, `Result` (with correlation IDs).
-- Client (`tn`) auto‑launches chosen shim if no server, then retries for ~1s with backoff.
-**Pass**: round‑trip tests succeed.
+---
 
-## Agent 4 — Notifier Shim (per‑profile)
-**Do**
-- LSUIElement app with `UNUserNotificationCenter.current()` delegate.
-- First post requests authorization; handle denial.
-- Implement actions (`open`, `activate`, `execute`) and callback to client for `--wait`.
-- Set `UNNotificationContent.interruptionLevel` from payload, including `.timeSensitive` when entitlement present.
-**Pass**: manual test posts a visible banner after grant; click actions work.
+## Change Scope
 
-## Agent 5 — Profiles
-**Do**
-- Implement `-sender` profile selection and `tn profiles list/install/doctor`.
-- `doctor` checks: authorization status, entitlement presence for timeSensitive, and Settings state; prints remediation.
-**Pass**: switching profiles changes visible app name/icon.
+- Only modify files relevant to assigned task.
+- No unrelated renames/restructures.
+- Keep changes cohesive and minimal per commit/PR.
 
-## Agent 6 — Listing & Removal
-**Do**
-- `list` (TSV: GroupID \t Title \t Subtitle \t Message \t DeliveredAt).
-- `remove GROUP|ALL` using `UNUserNotificationCenter` delivered set.
-**Pass**: integration tests show correct behavior across multiple posts.
+## Coding Standards
 
-## Agent 7 — Packaging
-**Do**
-- Universal build for `tn` and profile shims.
-- Codesign shims (Developer ID) with hardened runtime; notarize archive.
-- Brew formula that installs CLI + shims and provides shell completions.
-**Pass**: `brew test` can run `tn send -message ok` non‑blocking.
+- async/await; no main-thread blocking.
+- Error handling: `throws` → map to exit codes.
+- Public APIs documented; follow `swift-format` config.
+- CLI glue in `Sources/tn`, core logic in `Sources/TNCore`.
 
-## Agent 8 — CI
-**Do**
-- GitHub Actions matrix: macOS 13–15; Swift 5.10/6.
-- Run unit + integration tests headless.
-**Pass**: green matrix.
+## Testing
 
-## Agent 9 — Migration docs
-**Do**
-- `MIGRATION.md`: old→new flag table; `ignoreDnD` → `--interruption-level timeSensitive`; `-sender` explanation (profiles).
-**Pass**: reviewed and consistent with SPEC.
+- All new code covered by unit/integration tests.
+- Maintain/improve coverage; no broken tests.
+
+## Commits & PRs
+
+- Use Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
+- PRs must pass CI, update docs/tests if behavior changes, and reference SPEC/step.
+
+## External References
+
+- Use official Apple docs for platform behavior.
+- No code from unverified third-party repos.
+- Cite authoritative sources in comments if needed.
+
+## File Safety
+
+- Don’t change `.gitignore`, `Package.swift`, workflows unless required by step.
+- No secrets/credentials in repo.
+- Avoid large (>1 MB) files unless required.
+
+## Handoff & Blockers
+
+- Leave comments for non-obvious decisions.
+- Document blockers or partial work in PR description.
+- Respect step order in `AGENT_STEPS.md`.
+
+## Definition of Done
+
+- Aligned with SPEC.
+- Cohesive, tested, documented changes.
+- Passes CI/style/coverage gates.
