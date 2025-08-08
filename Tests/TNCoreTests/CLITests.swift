@@ -48,6 +48,16 @@ import Testing
     #expect(r.out.contains("message"))
   }
 
+  @Test func version_and_help_shortcuts() async throws {
+    let v = try runTN(["-version"]) 
+    #expect(v.exit == 0)
+    #expect(v.out.contains("0.1.0"))
+
+    let h = try runTN(["-help"]) 
+    #expect(h.exit == 0)
+    #expect(h.out.contains("send"))
+  }
+
   @Test func modern_send_message() async throws {
     let r = try runTN(["send", "--message", "Hello", "--title", "T"]) 
     #expect(r.exit == 0)
@@ -106,4 +116,3 @@ import Testing
     #expect(r.out.contains("posted"))
   }
 }
-
