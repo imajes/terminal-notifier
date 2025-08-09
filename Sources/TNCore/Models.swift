@@ -8,7 +8,7 @@ public enum InterruptionLevel: String, Codable {
   }
 }
 
-public struct NotificationPayload: Codable {
+public struct NotificationPayload: Codable, Equatable {
   public var title: String
   public var subtitle: String?
   public var message: String

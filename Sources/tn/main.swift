@@ -231,8 +231,37 @@ struct Remove: AsyncParsableCommand {
 }
 
 struct Profiles: ParsableCommand {
-  static let configuration = CommandConfiguration(abstract: "Manage sender profiles (shim bundles).")
-  func run() throws { print("Use: tn profiles [list|install NAME|doctor [NAME]]") }
+  static let configuration = CommandConfiguration(
+    abstract: "Manage sender profiles (shim bundles).",
+    subcommands: [ProfilesList.self, ProfilesInstall.self, ProfilesDoctor.self]
+  )
+}
+
+struct ProfilesList: ParsableCommand {
+  static let configuration = CommandConfiguration(abstract: "List known and installed profiles.")
+  func run() throws {
+    for info in try ProfilesManager.list() {
+      print("\(info.name)\tinstalled=\(info.installed)\tpath=\(info.path)")
+    }
+  }
+}
+
+struct ProfilesInstall: ParsableCommand {
+  static let configuration = CommandConfiguration(abstract: "Install a profile.")
+  @Argument var name: String
+  func run() throws {
+    let info = try ProfilesManager.install(name: name)
+    print(info.path)
+  }
+}
+
+struct ProfilesDoctor: ParsableCommand {
+  static let configuration = CommandConfiguration(abstract: "Doctor profiles state.")
+  @Argument var name: String?
+  func run() throws {
+    let out = try ProfilesManager.doctor(name: name)
+    print(out)
+  }
 }
 
 struct Doctor: ParsableCommand {
