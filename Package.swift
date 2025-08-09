@@ -6,11 +6,11 @@ let package = Package(
   platforms: [.macOS(.v13)],
   products: [
     .executable(name: "tn", targets: ["tn"]),
-    .library(name: "TNCore", targets: ["TNCore"])
+    .library(name: "TNCore", targets: ["TNCore"]),
   ],
   dependencies: [
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
-    .package(url: "https://github.com/apple/swift-log", from: "1.5.0")
+    .package(url: "https://github.com/apple/swift-log", from: "1.5.0"),
   ],
   targets: [
     .executableTarget(
@@ -18,14 +18,14 @@ let package = Package(
       dependencies: [
         "TNCore",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
-        .product(name: "Logging", package: "swift-log")
+        .product(name: "Logging", package: "swift-log"),
       ]
     ),
     .executableTarget(
       name: "NotifierShim",
       dependencies: [
         "TNCore",
-        .product(name: "Logging", package: "swift-log")
+        .product(name: "Logging", package: "swift-log"),
       ]
     ),
     .target(
@@ -37,6 +37,6 @@ let package = Package(
     .testTarget(
       name: "TNCoreTests",
       dependencies: ["TNCore"]
-    )
+    ),
   ]
 )

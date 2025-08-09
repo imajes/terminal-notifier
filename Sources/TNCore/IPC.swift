@@ -14,7 +14,7 @@ public struct SendRequest: Codable, Equatable {
 /// Request to list delivered notifications.
 public struct ListRequest: Codable, Equatable {
   public var correlationID: UUID
-  public var group: String // specific group or ALL
+  public var group: String  // specific group or ALL
 
   public init(correlationID: UUID = UUID(), group: String) {
     self.correlationID = correlationID
@@ -25,7 +25,7 @@ public struct ListRequest: Codable, Equatable {
 /// Request to remove delivered notifications.
 public struct RemoveRequest: Codable, Equatable {
   public var correlationID: UUID
-  public var group: String // specific group or ALL
+  public var group: String  // specific group or ALL
 
   public init(correlationID: UUID = UUID(), group: String) {
     self.correlationID = correlationID
@@ -36,7 +36,7 @@ public struct RemoveRequest: Codable, Equatable {
 /// Generic result returned from the shim.
 public struct Result: Codable, Equatable {
   public var correlationID: UUID?
-  public var status: String // "ok" or error code string
+  public var status: String  // "ok" or error code string
   public var message: String?
 
   public init(correlationID: UUID?, status: String, message: String? = nil) {
@@ -186,4 +186,3 @@ public enum IPCClient {
     return out
   }
 }
-

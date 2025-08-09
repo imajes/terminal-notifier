@@ -24,11 +24,14 @@ private enum TestErr: Error { case message(String) }
     proc.executableURL = URL(fileURLWithPath: path)
     proc.arguments = args
 
-    let outPipe = Pipe(); proc.standardOutput = outPipe
-    let errPipe = Pipe(); proc.standardError = errPipe
+    let outPipe = Pipe()
+    proc.standardOutput = outPipe
+    let errPipe = Pipe()
+    proc.standardError = errPipe
 
     if let input = input {
-      let inPipe = Pipe(); proc.standardInput = inPipe
+      let inPipe = Pipe()
+      proc.standardInput = inPipe
       try proc.run()
       inPipe.fileHandleForWriting.write(input.data(using: .utf8)!)
       inPipe.fileHandleForWriting.closeFile()
@@ -51,24 +54,24 @@ private enum TestErr: Error { case message(String) }
   }
 
   @Test func version_and_help_shortcuts() async throws {
-    let v = try runTN(["-version"]) 
+    let v = try runTN(["-version"])
     #expect(v.exit == 0)
     #expect(v.out.contains("0.1.0"))
 
-    let h = try runTN(["-help"]) 
+    let h = try runTN(["-help"])
     #expect(h.exit == 0)
     #expect(h.out.contains("send"))
   }
 
   @Test func modern_send_message() async throws {
-    let r = try runTN(["send", "--message", "Hello", "--title", "T"]) 
+    let r = try runTN(["send", "--message", "Hello", "--title", "T"])
     #expect(r.exit == 0)
     #expect(r.out.contains("posted"))
     #expect(r.out.contains("Hello"))
   }
 
   @Test func legacy_send_message() async throws {
-    let r = try runTN(["-message", "Hello", "-title", "T"]) 
+    let r = try runTN(["-message", "Hello", "-title", "T"])
     #expect(r.exit == 0)
     #expect(r.out.contains("posted"))
     #expect(r.out.contains("Hello"))
@@ -82,13 +85,13 @@ private enum TestErr: Error { case message(String) }
   }
 
   @Test func legacy_list_all_value() async throws {
-    let r = try runTN(["-list", "ALL"]) 
+    let r = try runTN(["-list", "ALL"])
     #expect(r.exit == 0)
     #expect(r.out.contains("group\t"))
   }
 
   @Test func legacy_remove_with_group_flag() async throws {
-    let r = try runTN(["-remove", "-group", "foo"]) 
+    let r = try runTN(["-remove", "-group", "foo"])
     #expect(r.exit == 0)
     #expect(r.err.contains("removed\tfoo"))
   }
@@ -101,31 +104,31 @@ private enum TestErr: Error { case message(String) }
   }
 
   @Test func invalid_interruption_level_exit2() async throws {
-    let r = try runTN(["send", "--message", "ok", "--interruption-level", "bogus"]) 
+    let r = try runTN(["send", "--message", "ok", "--interruption-level", "bogus"])
     #expect(r.exit == 2)
     #expect(r.err.contains("invalid --interruption-level"))
   }
 
   @Test func invalid_open_url_exit2() async throws {
-    let r = try runTN(["send", "--message", "ok", "--open", "foo://bar"]) 
+    let r = try runTN(["send", "--message", "ok", "--open", "foo://bar"])
     #expect(r.exit == 2)
     #expect(r.err.contains("invalid --open URL"))
   }
 
   @Test func missing_attachment_exit2() async throws {
-    let r = try runTN(["send", "--message", "ok", "--content-image", "/no/such/file.png"]) 
+    let r = try runTN(["send", "--message", "ok", "--content-image", "/no/such/file.png"])
     #expect(r.exit == 2)
     #expect(r.err.contains("content image not found"))
   }
 
   @Test func removed_ignoreDnD_is_error() async throws {
-    let r = try runTN(["-ignoreDnD"]) 
+    let r = try runTN(["-ignoreDnD"])
     #expect(r.exit == 2)
     #expect(r.err.contains("removed"))
   }
 
   @Test func legacy_wait_option_parses() async throws {
-    let r = try runTN(["-message", "ok", "-wait", "5"]) 
+    let r = try runTN(["-message", "ok", "-wait", "5"])
     #expect(r.exit == 0)
     #expect(r.out.contains("posted"))
   }

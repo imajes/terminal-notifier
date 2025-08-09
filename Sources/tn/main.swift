@@ -70,9 +70,10 @@ struct TN: AsyncParsableCommand {
       if tok.hasPrefix("-") && !tok.hasPrefix("--") {
         let name = String(tok.dropFirst())
         let legacyLongs: Set<String> = [
-          "message","title","subtitle","sound","group","open","execute","activate","contentImage","sender","wait",
+          "message", "title", "subtitle", "sound", "group", "open", "execute", "activate", "contentImage", "sender",
+          "wait",
           // accept dashed form for interruption-level
-          "interruption-level"
+          "interruption-level",
         ]
         if legacyLongs.contains(name) {
           normalized.append("--" + name)
@@ -97,7 +98,9 @@ struct TN: AsyncParsableCommand {
       var group = "ALL"
       if idx + 1 < normalized.count, !normalized[idx + 1].hasPrefix("-") { group = normalized[idx + 1] }
       // also support '-remove -group X'
-      if let gidx = normalized.firstIndex(of: "--group"), gidx + 1 < normalized.count, !normalized[gidx + 1].hasPrefix("-") {
+      if let gidx = normalized.firstIndex(of: "--group"), gidx + 1 < normalized.count,
+        !normalized[gidx + 1].hasPrefix("-")
+      {
         group = normalized[gidx + 1]
       }
       return [argv[0], "remove", group]
@@ -105,7 +108,10 @@ struct TN: AsyncParsableCommand {
 
     // If no explicit subcommand but legacy send-style flags are present or stdin is piped, default to `send`.
     if !hasExplicitSubcommand {
-      let legacyMarkers: Set<String> = ["--message","--title","--subtitle","--sound","--group","--open","--execute","--activate","--contentImage","--sender","--interruption-level","--wait"]
+      let legacyMarkers: Set<String> = [
+        "--message", "--title", "--subtitle", "--sound", "--group", "--open", "--execute", "--activate",
+        "--contentImage", "--sender", "--interruption-level", "--wait",
+      ]
       let hasLegacy = normalized.contains(where: { legacyMarkers.contains($0) })
       let piped = isatty(fileno(stdin)) == 0
       if hasLegacy || piped {
@@ -151,7 +157,11 @@ struct Send: AsyncParsableCommand {
   @Option(help: "Sender profile name (selects shim bundle).")
   var sender: String?
 
-  @Option(name: .customLong("interruption-level"), parsing: .next, help: "passive|active|timeSensitive (default: active)")
+  @Option(
+    name: .customLong("interruption-level"),
+    parsing: .next,
+    help: "passive|active|timeSensitive (default: active)"
+  )
   var interruption: String?
 
   @Option(help: "Wait N seconds for click action result (default: 30).")

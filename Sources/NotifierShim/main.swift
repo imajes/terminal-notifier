@@ -1,8 +1,8 @@
+import AppKit
 import Foundation
 import Logging
 import TNCore
 import UserNotifications
-import AppKit
 
 @main
 struct NotifierShimMain {
@@ -15,7 +15,7 @@ struct NotifierShimMain {
     var addr = sockaddr_un()
     let cstr = sock.utf8CString
     #if os(macOS)
-    addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+      addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
     #endif
     addr.sun_family = sa_family_t(AF_UNIX)
     withUnsafeMutableBytes(of: &addr.sun_path) { raw in _ = raw.initializeMemory(as: CChar.self, from: cstr) }
@@ -43,11 +43,17 @@ struct NotifierShimMain {
       // Read header
       var header = [UInt8](repeating: 0, count: 4)
       let r1 = header.withUnsafeMutableBytes { Darwin.read(cfd, $0.baseAddress, 4) }
-      if r1 != 4 { Darwin.close(cfd); continue }
+      if r1 != 4 {
+        Darwin.close(cfd)
+        continue
+      }
       let length = header.withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian
       var body = Data(count: Int(length))
       let r2 = body.withUnsafeMutableBytes { Darwin.read(cfd, $0.baseAddress, Int(length)) }
-      if r2 != Int(length) { Darwin.close(cfd); continue }
+      if r2 != Int(length) {
+        Darwin.close(cfd)
+        continue
+      }
 
       // Try to decode known requests
       var correlation: UUID? = nil
@@ -61,20 +67,25 @@ struct NotifierShimMain {
         } catch let e as Notifier.Error {
           switch e {
           case .notAuthorized:
-            result.status = "not_authorized"; result.message = "notifications not authorized"
+            result.status = "not_authorized"
+            result.message = "notifications not authorized"
           case .invalidAttachment(let m):
-            result.status = "invalid_attachment"; result.message = m
+            result.status = "invalid_attachment"
+            result.message = m
           case .runtime(let m):
-            result.status = "runtime_error"; result.message = m
+            result.status = "runtime_error"
+            result.message = m
           }
         } catch {
-          result.status = "runtime_error"; result.message = String(describing: error)
+          result.status = "runtime_error"
+          result.message = String(describing: error)
         }
       } else if let req: ListRequest = try? FrameIO.decode(body) {
         correlation = req.correlationID
         result.correlationID = correlation
         let tsv = try await Notifier.shared.list(group: req.group)
-        result.status = "ok"; result.message = tsv
+        result.status = "ok"
+        result.message = tsv
       } else if let req: RemoveRequest = try? FrameIO.decode(body) {
         correlation = req.correlationID
         result.correlationID = correlation
@@ -89,7 +100,11 @@ struct NotifierShimMain {
 }
 
 actor Notifier {
-  enum Error: Swift.Error { case notAuthorized, invalidAttachment(String), runtime(String) }
+  enum Error: Swift.Error {
+    case notAuthorized
+    case invalidAttachment(String)
+    case runtime(String)
+  }
   static let shared = Notifier()
 
   func ensureAuthorized() async throws {
@@ -129,8 +144,11 @@ actor Notifier {
     content.body = payload.message
     if let g = payload.groupID { content.threadIdentifier = g }
     if let snd = payload.sound {
-      if snd == "default" { content.sound = .default }
-      else { content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: snd)) }
+      if snd == "default" {
+        content.sound = .default
+      } else {
+        content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: snd))
+      }
     }
 
     if let att = try await makeAttachmentIfNeeded(from: payload.contentImage) {
@@ -144,7 +162,11 @@ actor Notifier {
     }
 
     let id = UUID().uuidString
-    let req = UNNotificationRequest(identifier: id, content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false))
+    let req = UNNotificationRequest(
+      identifier: id,
+      content: content,
+      trigger: UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+    )
     try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Swift.Error>) in
       UNUserNotificationCenter.current().add(req) { err in
         if let err = err { cont.resume(throwing: err) } else { cont.resume(returning: ()) }
@@ -182,7 +204,9 @@ actor Notifier {
       // Fetch to a temp file
       guard let url = URL(string: ref) else { throw Error.invalidAttachment("invalid URL: \(ref)") }
       let (data, _) = try await URLSession.shared.data(from: url)
-      let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("img")
+      let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(
+        "img"
+      )
       try data.write(to: tmp)
       return try UNNotificationAttachment(identifier: UUID().uuidString, url: tmp)
     } else if ref.hasPrefix("file://") {

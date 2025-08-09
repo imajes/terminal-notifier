@@ -22,7 +22,20 @@ public struct NotificationPayload: Codable, Equatable {
   public var interruptionLevel: InterruptionLevel
   public var waitSeconds: Int?
 
-  public init(title: String, subtitle: String?, message: String, groupID: String?, sound: String?, openURL: String?, execute: String?, activateBundleID: String?, contentImage: String?, senderProfile: String?, interruptionLevel: InterruptionLevel, waitSeconds: Int?) {
+  public init(
+    title: String,
+    subtitle: String?,
+    message: String,
+    groupID: String?,
+    sound: String?,
+    openURL: String?,
+    execute: String?,
+    activateBundleID: String?,
+    contentImage: String?,
+    senderProfile: String?,
+    interruptionLevel: InterruptionLevel,
+    waitSeconds: Int?
+  ) {
     self.title = title
     self.subtitle = subtitle
     self.message = message

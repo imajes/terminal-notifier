@@ -10,12 +10,20 @@ public enum Engine {
       if result.status == "ok" {
         return
       } else {
-        throw NSError(domain: "tn", code: 1, userInfo: [NSLocalizedDescriptionKey: result.message ?? "error posting notification"])
+        throw NSError(
+          domain: "tn",
+          code: 1,
+          userInfo: [NSLocalizedDescriptionKey: result.message ?? "error posting notification"]
+        )
       }
     } else {
       // Stub output for now.
       logger.info("POST \(payload.title) :: \(payload.message) (group=\(payload.groupID ?? "nil"))")
-      FileHandle.standardOutput.write(("posted\t\(payload.groupID ?? "")\t\(payload.title)\t\(payload.subtitle ?? "")\t\(payload.message)\n").data(using: .utf8)!)
+      FileHandle.standardOutput.write(
+        ("posted\t\(payload.groupID ?? "")\t\(payload.title)\t\(payload.subtitle ?? "")\t\(payload.message)\n").data(
+          using: .utf8
+        )!
+      )
     }
   }
 
@@ -27,7 +35,11 @@ public enum Engine {
         // Server may return TSV in message
         if let msg = result.message { print(msg) }
       } else {
-        throw NSError(domain: "tn", code: 1, userInfo: [NSLocalizedDescriptionKey: result.message ?? "error listing notifications"])
+        throw NSError(
+          domain: "tn",
+          code: 1,
+          userInfo: [NSLocalizedDescriptionKey: result.message ?? "error listing notifications"]
+        )
       }
     } else {
       print("group\ttitle\tsubtitle\tmessage\tdeliveredAt")
@@ -41,7 +53,11 @@ public enum Engine {
       if result.status == "ok" {
         return
       } else {
-        throw NSError(domain: "tn", code: 1, userInfo: [NSLocalizedDescriptionKey: result.message ?? "error removing notifications"])
+        throw NSError(
+          domain: "tn",
+          code: 1,
+          userInfo: [NSLocalizedDescriptionKey: result.message ?? "error removing notifications"]
+        )
       }
     } else {
       fputs("removed\t\(group)\n", stderr)
