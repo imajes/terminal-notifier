@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Lint Swift sources using SwiftLint with repo config.
+set -euo pipefail
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+CONFIG="$ROOT_DIR/.swiftlint.yml"
+
+if ! command -v swiftlint >/dev/null 2>&1; then
+  echo "swiftlint not found. Install via: brew install swiftlint" >&2
+  exit 127
+fi
+
+MODE=${1:-lint}
+case "$MODE" in
+  fix|autocorrect)
+    exec swiftlint --config "$CONFIG" autocorrect
+    ;;
+  --help|-h|help)
+    echo "Usage: bin/lint [lint|fix]"; exit 0
+    ;;
+  *)
+    exec swiftlint --config "$CONFIG" lint --strict
+    ;;
+esac
+

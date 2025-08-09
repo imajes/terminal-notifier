@@ -1,0 +1,39 @@
+# Swift 6 mode
+swiftversion = 6.0
+
+# General
+indent = 2
+linebreaks = lf
+maxwidth = 120
+trimwhitespace = always
+semicolons = never
+
+# Wrapping
+wraparguments = before-first
+wrapcollections = before-first
+wrapconditions = before-first
+
+# Commas and parentheses
+commas = always
+closingparen = balanced
+
+# Imports / conditionals
+importblanklines = remove
+ifdef = indent
+
+# Spacing and style
+spacearoundoperators = true
+ranges = spaced
+self = remove
+stripunusedargs = closure-only
+hoistpatternlet = enabled
+
+# Numeric literal grouping
+hexgrouping = 4,8
+binarygrouping = 4,8
+decimalgrouping = 3,6
+exponentcase = lowercase
+
+# Exclude build artifacts
+exclude = .build,.swiftpm,DerivedData
+

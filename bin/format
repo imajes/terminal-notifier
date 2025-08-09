@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Format Swift sources using SwiftFormat with repo config.
+set -euo pipefail
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+CONFIG="$ROOT_DIR/.swiftformat"
+
+if ! command -v swiftformat >/dev/null 2>&1; then
+  echo "swiftformat not found. Install via: brew install swiftformat" >&2
+  exit 127
+fi
+
+MODE=${1:-write}
+case "$MODE" in
+  --check|check)
+    exec swiftformat --config "$CONFIG" --lint "$ROOT_DIR"
+    ;;
+  --help|-h|help)
+    echo "Usage: bin/format [--check]"; exit 0
+    ;;
+  *)
+    exec swiftformat --config "$CONFIG" "$ROOT_DIR"
+    ;;
+esac
+
