@@ -17,6 +17,7 @@ analyzer_rules:
 
 disabled_rules:
   - trailing_comma
+  - opening_brace
 
 opt_in_rules:
   - array_init

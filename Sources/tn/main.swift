@@ -99,7 +99,8 @@ struct TN: AsyncParsableCommand {
       if idx + 1 < normalized.count, !normalized[idx + 1].hasPrefix("-") { group = normalized[idx + 1] }
       // also support '-remove -group X'
       if let gidx = normalized.firstIndex(of: "--group"), gidx + 1 < normalized.count,
-        !normalized[gidx + 1].hasPrefix("-") {
+        !normalized[gidx + 1].hasPrefix("-")
+      {
         group = normalized[gidx + 1]
       }
       return [argv[0], "remove", group]
