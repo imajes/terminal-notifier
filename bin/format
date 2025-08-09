@@ -1,24 +1,69 @@
-#!/usr/bin/env bash
-# Format Swift sources using SwiftFormat with repo config.
-set -euo pipefail
-ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-CONFIG="$ROOT_DIR/.swiftformat"
+#!/usr/bin/env zsh
 
-if ! command -v swiftformat >/dev/null 2>&1; then
-  echo "swiftformat not found. Install via: brew install swiftformat" >&2
+# Format Swift sources using Apple's swift-format (from Xcode toolchain).
+# - Default: format in-place
+# - --check|check: lint (no changes) and fail if reformat needed
+
+set -euo pipefail
+
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+
+# Find the Apple swift-format binary via xcrun (added on line 9 per repo notes)
+SWIFT_FORMAT_BIN=$(xcrun --find swift-format 2>/dev/null || true)
+
+# Prefer a repo config for swift-format if present.
+# Search common names, fall back to the provided default config in the repo.
+SWIFT_FORMAT_CONFIG=""
+for candidate in \
+  "$ROOT_DIR/.swift-format" \
+  "$ROOT_DIR/.swift-format.json" \
+  "$ROOT_DIR/swift-format-default-config.json"
+do
+  if [[ -f "$candidate" ]]; then
+    SWIFT_FORMAT_CONFIG="$candidate"
+    break
+  fi
+done
+
+# Limit to Swift sources we control, avoiding .build and other dirs.
+PATHS=()
+[[ -d "$ROOT_DIR/Sources" ]] && PATHS+=("$ROOT_DIR/Sources")
+[[ -d "$ROOT_DIR/Tests" ]] && PATHS+=("$ROOT_DIR/Tests")
+[[ -f "$ROOT_DIR/Package.swift" ]] && PATHS+=("$ROOT_DIR/Package.swift")
+
+if [[ -z "${SWIFT_FORMAT_BIN}" || ! -x "${SWIFT_FORMAT_BIN}" ]]; then
+  echo "swift-format (Apple) not found via xcrun. Ensure Xcode command-line tools are installed." >&2
+  echo "Hint: xcode-select --install" >&2
   exit 127
 fi
 
 MODE=${1:-write}
 case "$MODE" in
   --check|check)
-    exec swiftformat --config "$CONFIG" --lint "$ROOT_DIR"
+    # Lint (no changes) across PATHS; exit non-zero if formatting is needed
+    if [[ -n "$SWIFT_FORMAT_CONFIG" ]]; then
+      exec "$SWIFT_FORMAT_BIN" lint --strict --parallel --configuration "$SWIFT_FORMAT_CONFIG" --recursive "${PATHS[@]}"
+    else
+      exec "$SWIFT_FORMAT_BIN" lint --strict --parallel --recursive "${PATHS[@]}"
+    fi
     ;;
   --help|-h|help)
-    echo "Usage: bin/format [--check]"; exit 0
+    echo "Usage: bin/format [--check]" >&2
+    if [[ -n "$SWIFT_FORMAT_BIN" ]]; then
+      echo "  Uses: $SWIFT_FORMAT_BIN (Apple swift-format)" >&2
+    else
+      echo "  Uses: <not found> (Apple swift-format)" >&2
+    fi
+    echo "  Config: ${SWIFT_FORMAT_CONFIG:-<none>}" >&2
+    echo "  Targets: ${PATHS[*]:-<none>}" >&2
+    exit 0
     ;;
   *)
-    exec swiftformat --config "$CONFIG" "$ROOT_DIR"
+    # Format in-place across PATHS
+    if [[ -n "$SWIFT_FORMAT_CONFIG" ]]; then
+      exec "$SWIFT_FORMAT_BIN" format --in-place --parallel --configuration "$SWIFT_FORMAT_CONFIG" --recursive "${PATHS[@]}"
+    else
+      exec "$SWIFT_FORMAT_BIN" format --in-place --parallel --recursive "${PATHS[@]}"
+    fi
     ;;
 esac
-
