@@ -99,8 +99,7 @@ struct TN: AsyncParsableCommand {
       if idx + 1 < normalized.count, !normalized[idx + 1].hasPrefix("-") { group = normalized[idx + 1] }
       // also support '-remove -group X'
       if let gidx = normalized.firstIndex(of: "--group"), gidx + 1 < normalized.count,
-        !normalized[gidx + 1].hasPrefix("-")
-      {
+        !normalized[gidx + 1].hasPrefix("-") {
         group = normalized[gidx + 1]
       }
       return [argv[0], "remove", group]
@@ -112,7 +111,7 @@ struct TN: AsyncParsableCommand {
         "--message", "--title", "--subtitle", "--sound", "--group", "--open", "--execute", "--activate",
         "--contentImage", "--sender", "--interruption-level", "--wait",
       ]
-      let hasLegacy = normalized.contains(where: { legacyMarkers.contains($0) })
+      let hasLegacy = normalized.contains { legacyMarkers.contains($0) }
       let piped = isatty(fileno(stdin)) == 0
       if hasLegacy || piped {
         return [argv[0], "send"] + normalized

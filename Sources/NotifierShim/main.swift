@@ -33,10 +33,10 @@ struct NotifierShimMain {
     // Simple accept loop: handle one request per connection, reply, close.
     while true {
       var addr2 = sockaddr()
-      var len: socklen_t = socklen_t(MemoryLayout<sockaddr>.size)
+      var len = socklen_t(MemoryLayout<sockaddr>.size)
       let cfd = withUnsafeMutablePointer(to: &addr2) { ap in
         ap.withMemoryRebound(to: sockaddr.self, capacity: 1) { sp in
-          return Darwin.accept(fd, sp, &len)
+          Darwin.accept(fd, sp, &len)
         }
       }
       if cfd < 0 { continue }
@@ -56,7 +56,7 @@ struct NotifierShimMain {
       }
 
       // Try to decode known requests
-      var correlation: UUID? = nil
+      var correlation: UUID?
       var result = Result(correlationID: correlation, status: "ok")
       if let req: SendRequest = try? FrameIO.decode(body) {
         correlation = req.correlationID
@@ -118,7 +118,7 @@ actor Notifier {
     case .notDetermined:
       let granted = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Bool, Swift.Error>) in
         center.requestAuthorization(options: [.alert, .sound]) { granted, err in
-          if let err = err { cont.resume(throwing: err) } else { cont.resume(returning: granted) }
+          if let err { cont.resume(throwing: err) } else { cont.resume(returning: granted) }
         }
       }
       if !granted { throw Error.notAuthorized }
@@ -169,7 +169,7 @@ actor Notifier {
     )
     try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Swift.Error>) in
       UNUserNotificationCenter.current().add(req) { err in
-        if let err = err { cont.resume(throwing: err) } else { cont.resume(returning: ()) }
+        if let err { cont.resume(throwing: err) } else { cont.resume(returning: ()) }
       }
     }
   }
@@ -199,7 +199,7 @@ actor Notifier {
   }
 
   private func makeAttachmentIfNeeded(from ref: String?) async throws -> UNNotificationAttachment? {
-    guard let ref = ref, !ref.isEmpty else { return nil }
+    guard let ref, !ref.isEmpty else { return nil }
     if ref.hasPrefix("http://") || ref.hasPrefix("https://") {
       // Fetch to a temp file
       guard let url = URL(string: ref) else { throw Error.invalidAttachment("invalid URL: \(ref)") }

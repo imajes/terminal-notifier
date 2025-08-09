@@ -16,11 +16,11 @@ import Testing
     }
 
     let before = try ProfilesManager.list()
-    #expect(before.contains(where: { $0.name == "default" }))
+    #expect(before.contains { $0.name == "default" })
     // Install
     let info = try ProfilesManager.install(name: "default")
     #expect(info.installed)
     let after = try ProfilesManager.list()
-    #expect(after.first(where: { $0.name == "default" })?.installed == true)
+    #expect(after.first { $0.name == "default" }?.installed == true)
   }
 }

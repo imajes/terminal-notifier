@@ -1,5 +1,3 @@
-swift_version: 6.0
-
 included:
   - Sources
   - Tests
@@ -15,6 +13,10 @@ reporter: "xcode"
 analyzer_rules:
   - unused_declaration
   - unused_import
+  - explicit_self
+
+disabled_rules:
+  - trailing_comma
 
 opt_in_rules:
   - array_init
@@ -28,7 +30,6 @@ opt_in_rules:
   - empty_count
   - empty_string
   - explicit_init
-  - explicit_self
   - file_name
   - file_name_no_space
   - first_where

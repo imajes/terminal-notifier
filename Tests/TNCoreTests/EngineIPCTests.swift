@@ -36,10 +36,10 @@ import Testing
 
     let thread = Thread {
       var addr2 = sockaddr()
-      var len: socklen_t = socklen_t(MemoryLayout<sockaddr>.size)
+      var len = socklen_t(MemoryLayout<sockaddr>.size)
       let cfd = withUnsafeMutablePointer(to: &addr2) { ap in
         ap.withMemoryRebound(to: sockaddr.self, capacity: 1) { sp in
-          return Darwin.accept(fd, sp, &len)
+          Darwin.accept(fd, sp, &len)
         }
       }
       guard cfd >= 0 else {

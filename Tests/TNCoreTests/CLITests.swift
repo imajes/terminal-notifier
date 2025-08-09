@@ -29,7 +29,7 @@ private enum TestErr: Error { case message(String) }
     let errPipe = Pipe()
     proc.standardError = errPipe
 
-    if let input = input {
+    if let input {
       let inPipe = Pipe()
       proc.standardInput = inPipe
       try proc.run()
