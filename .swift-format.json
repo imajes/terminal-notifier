@@ -9,7 +9,7 @@
   },
   "lineBreakAroundMultilineExpressionChainComponents": false,
   "lineBreakBeforeControlFlowKeywords": false,
-  "lineBreakBeforeEachArgument": false,
+  "lineBreakBeforeEachArgument": true,
   "lineBreakBeforeEachGenericRequirement": false,
   "lineBreakBetweenDeclarationAttributes": false,
   "lineLength": 120,
@@ -18,12 +18,12 @@
   "noAssignmentInExpressions": {
     "allowedFunctions": ["XCTAssertNoThrow"]
   },
-  "prioritizeKeepingFunctionOutputTogether": false,
+  "prioritizeKeepingFunctionOutputTogether": true,
   "reflowMultilineStringLiterals": "never",
   "respectsExistingLineBreaks": true,
   "rules": {
     "AllPublicDeclarationsHaveDocumentation": false,
-    "AlwaysUseLiteralForEmptyCollectionInit": false,
+    "AlwaysUseLiteralForEmptyCollectionInit": true,
     "AlwaysUseLowerCamelCase": true,
     "AmbiguousTrailingClosureOverload": true,
     "AvoidRetroactiveConformances": true,
@@ -41,7 +41,7 @@
     "NoAssignmentInExpressions": true,
     "NoBlockComments": true,
     "NoCasesWithOnlyFallthrough": true,
-    "NoEmptyLinesOpeningClosingBraces": false,
+    "NoEmptyLinesOpeningClosingBraces": true,
     "NoEmptyTrailingClosureParentheses": true,
     "NoLabelsInCasePatterns": true,
     "NoLeadingUnderscores": false,
@@ -63,7 +63,7 @@
     "UseSingleLinePropertyGetter": true,
     "UseSynthesizedInitializer": true,
     "UseTripleSlashForDocumentationComments": true,
-    "UseWhereClausesInForLoops": false,
+    "UseWhereClausesInForLoops": true,
     "ValidateDocumentationComments": false
   },
   "spacesAroundRangeFormationOperators": false,
