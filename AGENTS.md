@@ -14,6 +14,8 @@
 
 - `swift build` / `swift build -c release`
 - `swift run tn --help`
+- bin/format --check / bin/format
+- bin/lint / bin/lint fix
 - `swift test`
 - Example: `swift run tn send --message "Hello"` or legacy `swift run tn -message "Hello"`
 
@@ -31,6 +33,7 @@
 - Error handling: `throws` → map to exit codes.
 - Public APIs documented; follow `swift-format` config.
 - CLI glue in `Sources/tn`, core logic in `Sources/TNCore`.
+- After each phase of work, or similar stopping point, run lint/format to ensure that we keep aligned to swift style standards. Work to reduce lint errors wherever possible.
 
 ## Testing
 
@@ -51,7 +54,7 @@
 
 ## File Safety
 
-- Don’t change `.gitignore`, `Package.swift`, workflows unless required by step.
+- Don’t change `.gitignore`, `Package.swift`, workflows or lint/format configuration code unless required by step.
 - No secrets/credentials in repo.
 - Avoid large (>1 MB) files unless required.
 
