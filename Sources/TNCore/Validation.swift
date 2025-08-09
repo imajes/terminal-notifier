@@ -53,11 +53,10 @@ public enum Validation {
       if ci.hasPrefix("http://") || ci.hasPrefix("https://") {
         // Remote URL allowed; shim may download later.
       } else if ci.hasPrefix("file://") {
-        if let url = URL(string: ci), url.isFileURL {
-          try validateLocalAttachment(atPath: url.path)
-        } else {
+        guard let url = URL(string: ci), url.isFileURL else {
           throw TNValidationError.attachmentNotFound(ci)
         }
+        try validateLocalAttachment(atPath: url.path)
       } else {
         // Treat as local path.
         try validateLocalAttachment(atPath: ci)

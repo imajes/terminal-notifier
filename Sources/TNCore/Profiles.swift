@@ -43,15 +43,13 @@ public enum ProfilesManager {
   @discardableResult
   public static func doctor(name: String?) throws -> String {
     let list = try self.list()
-    if let n = name {
-      if let info = list.first(where: { $0.name == n }) {
-        return "\(info.name)\tinstalled=\(info.installed)\tpath=\(info.path)"
-      } else {
-        return "unknown profile: \(n)"
-      }
-    } else {
+    guard let n = name else {
       return list.map { "\($0.name)\tinstalled=\($0.installed)\tpath=\($0.path)" }.joined(separator: "\n")
     }
+    guard let info = list.first(where: { $0.name == n }) else {
+      return "unknown profile: \(n)"
+    }
+    return "\(info.name)\tinstalled=\(info.installed)\tpath=\(info.path)"
   }
 
   private static func ensureBase() throws {
