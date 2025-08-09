@@ -21,6 +21,13 @@ let package = Package(
         .product(name: "Logging", package: "swift-log")
       ]
     ),
+    .executableTarget(
+      name: "NotifierShim",
+      dependencies: [
+        "TNCore",
+        .product(name: "Logging", package: "swift-log")
+      ]
+    ),
     .target(
       name: "TNCore",
       dependencies: [
