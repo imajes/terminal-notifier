@@ -1,11 +1,12 @@
 import ArgumentParser
+import Darwin
 import Foundation
 import Logging
 import TNCore
 
 @main
 struct TN: AsyncParsableCommand {
-  static var configuration = CommandConfiguration(
+  static let configuration = CommandConfiguration(
     commandName: "tn",
     abstract: "Post macOS notifications from the terminal.",
     discussion: "Use modern subcommands (e.g. 'tn send') or legacy top-level flags (e.g. '-message', '-title').",
@@ -22,150 +23,103 @@ struct TN: AsyncParsableCommand {
     // Early error for removed flags.
     if args.contains("-ignoreDnD") {
       fputs("error: '-ignoreDnD' was removed; use --interruption-level timeSensitive\n", stderr)
-      exit(2)
+      Darwin.exit(2)
     }
 
     args = rewriteLegacy(args)
     do {
-      var command = try Self.parseAsRoot(args)
-      try await command.run()
+      var command = try Self.parseAsRoot(Array(args.dropFirst()))
+      if var asyncCommand = command as? any AsyncParsableCommand {
+        try await asyncCommand.run()
+      } else {
+        try command.run()
+      }
     } catch let e as ExitCode {
-      // Propagate our explicit exit codes without extra noise.
-      exit(e.rawValue)
+      Self.exit(withError: e)
     } catch {
-      // Unknown parser or runtime error → exit 1 by default.
-      fputs("error: \(error)\n", stderr)
-      exit(1)
+      // Delegate printing/exit code mapping to ArgumentParser.
+      Self.exit(withError: error)
     }
   }
 
   /// Rewrites legacy single-dash long options to `--` form and shorthands.
+
   private static func rewriteLegacy(_ argv: [String]) -> [String] {
-    guard argv.count > 1 else { return argv }
-    var out: [String] = [argv[0]]
-    var i = 1
-    while i < argv.count {
-      let tok = argv[i]
+    guard argv.count > 1 else {
+      // If no args and stdin is piped, default to `send`.
+      if isatty(fileno(stdin)) == 0 { return [argv[0], "send"] }
+      return argv
+    }
+    let subcommands = Set(["send", "list", "remove", "profiles", "doctor"])
+    var tokens = Array(argv.dropFirst())
 
-      // Map `-help` / `-version` to the built-in flags.
-      if tok == "-help" { out.append("--help"); i += 1; continue }
-      if tok == "-version" { out.append("--version"); i += 1; continue }
+    // Map shortcuts for help/version.
+    tokens = tokens.map { $0 == "-help" ? "--help" : ($0 == "-version" ? "--version" : $0) }
 
-      // Shorthand: `-list <GROUP|ALL>` / `-remove <GROUP|ALL>` optionally take a value.
+    // Normalize legacy single-dash long options to `--` form for send.
+    var normalized: [String] = []
+    var i = 0
+    while i < tokens.count {
+      let tok = tokens[i]
       if tok == "-list" || tok == "-remove" {
-        out.append("--" + String(tok.dropFirst())) // -> --list / --remove
-        let next = (i + 1 < argv.count) ? argv[i + 1] : nil
-        if let n = next, !n.hasPrefix("-") {
-          // Treat trailing value as group selector.
-          out.append("--group"); out.append(n)
-          i += 2
-        } else {
-          i += 1
-        }
+        // Handle later in dispatch.
+        normalized.append(tok)
+        i += 1
         continue
       }
-
-      // Single-dash long-like legacy flags to support: -message, -title, -subtitle, -sound,
-      // -group, -open, -execute, -activate, -contentImage, -sender
-      let legacyLongs: Set<String> = [
-        "message","title","subtitle","sound","group","open","execute","activate","contentImage","sender","wait"
-      ]
-      if tok.hasPrefix("-"), !tok.hasPrefix("--") {
+      if tok.hasPrefix("-") && !tok.hasPrefix("--") {
         let name = String(tok.dropFirst())
+        let legacyLongs: Set<String> = [
+          "message","title","subtitle","sound","group","open","execute","activate","contentImage","sender","wait",
+          // accept dashed form for interruption-level
+          "interruption-level"
+        ]
         if legacyLongs.contains(name) {
-          out.append("--" + name)
+          normalized.append("--" + name)
           i += 1
           continue
         }
       }
-
-      out.append(tok)
+      normalized.append(tok)
       i += 1
     }
-    return out
-  }
 
-  // Legacy compatibility: parse top-level flags and route to subcommands.
-  @Option(name: .customLong("message"), help: "Notification body.")
-  var legacyMessage: String?
+    // Determine if user already chose a modern subcommand.
+    let hasExplicitSubcommand = normalized.contains { !$0.hasPrefix("-") && subcommands.contains($0) }
 
-  @Option(name: .customLong("title"), help: "Notification title.")
-  var legacyTitle: String?
-
-  @Option(name: .customLong("subtitle"), help: "Notification subtitle.")
-  var legacySubtitle: String?
-
-  @Option(name: .customLong("sound"), help: "System sound name (use 'default' for system default).")
-  var legacySound: String?
-
-  @Option(name: .customLong("group"), help: "Notification group identifier.")
-  var legacyGroup: String?
-
-  @Option(name: .customLong("open"), help: "URL to open on click.")
-  var legacyOpen: String?
-
-  @Option(name: .customLong("execute"), help: "Shell command to run on click.")
-  var legacyExecute: String?
-
-  @Option(name: .customLong("activate"), help: "Bundle identifier to activate on click.")
-  var legacyActivate: String?
-
-  @Option(name: .customLong("contentImage"), help: "Path or URL to image attachment.")
-  var legacyContentImage: String?
-
-  @Option(name: .customLong("sender"), help: "Sender profile name (selects shim bundle).")
-  var legacySender: String?
-
-  @Option(name: .customLong("interruption-level"), parsing: .next, help: "passive|active|timeSensitive (default: active)")
-  var legacyInterruption: String?
-
-  @Flag(name: .customLong("list"), help: "List notifications for a group or ALL (use with --group or ALL).")
-  var legacyList: Bool = false
-
-  @Flag(name: .customLong("remove"), help: "Remove notifications for a group or ALL (use with --group or ALL).")
-  var legacyRemove: Bool = false
-
-  @Option(name: .customLong("wait"), help: "Wait N seconds for click action result (default: 30).")
-  var legacyWait: Int?
-
-  mutating func run() async throws {
-    // If a subcommand is explicitly provided, ArgumentParser won't call this.
-    // This is reached only when user used legacy flags without subcommand.
-    if legacyList {
-      let group = legacyGroup ?? "ALL"
-      var cmd = ListCmd()
-      cmd.group = group
-      try await cmd.run()
-      return
+    // Legacy list/remove at top level → subcommand.
+    if let idx = normalized.firstIndex(of: "-list") {
+      var group = "ALL"
+      if idx + 1 < normalized.count, !normalized[idx + 1].hasPrefix("-") { group = normalized[idx + 1] }
+      return [argv[0], "list", group]
     }
-    if legacyRemove {
-      let group = legacyGroup ?? "ALL"
-      var cmd = Remove()
-      cmd.group = group
-      try await cmd.run()
-      return
+    if let idx = normalized.firstIndex(of: "-remove") {
+      var group = "ALL"
+      if idx + 1 < normalized.count, !normalized[idx + 1].hasPrefix("-") { group = normalized[idx + 1] }
+      // also support '-remove -group X'
+      if let gidx = normalized.firstIndex(of: "--group"), gidx + 1 < normalized.count, !normalized[gidx + 1].hasPrefix("-") {
+        group = normalized[gidx + 1]
+      }
+      return [argv[0], "remove", group]
     }
 
-    // Legacy send fallback (including stdin handling).
-    var cmd = Send()
-    cmd.title = legacyTitle
-    cmd.subtitle = legacySubtitle
-    cmd.message = legacyMessage // Send handles stdin fallback if nil
-    cmd.sound = legacySound
-    cmd.group = legacyGroup
-    cmd.open = legacyOpen
-    cmd.execute = legacyExecute
-    cmd.activate = legacyActivate
-    cmd.contentImage = legacyContentImage
-    cmd.sender = legacySender
-    cmd.interruption = legacyInterruption
-    cmd.wait = legacyWait
-    try await cmd.run()
+    // If no explicit subcommand but legacy send-style flags are present or stdin is piped, default to `send`.
+    if !hasExplicitSubcommand {
+      let legacyMarkers: Set<String> = ["--message","--title","--subtitle","--sound","--group","--open","--execute","--activate","--contentImage","--sender","--interruption-level","--wait"]
+      let hasLegacy = normalized.contains(where: { legacyMarkers.contains($0) })
+      let piped = isatty(fileno(stdin)) == 0
+      if hasLegacy || piped {
+        return [argv[0], "send"] + normalized
+      }
+    }
+
+    // Otherwise, keep as-is.
+    return [argv[0]] + normalized
   }
 }
 
 struct Send: AsyncParsableCommand {
-  static var configuration = CommandConfiguration(abstract: "Post a notification.")
+  static let configuration = CommandConfiguration(abstract: "Post a notification.")
 
   @Option(help: "Notification title.")
   var title: String?
@@ -242,13 +196,24 @@ struct Send: AsyncParsableCommand {
       waitSeconds: wait
     )
 
+    // Validate payload before dispatching to engine.
+    do {
+      try Validation.validate(payload)
+    } catch let ve as TNValidationError {
+      fputs("error: \(ve.description)\n", stderr)
+      throw ExitCode(2)
+    } catch {
+      fputs("error: \(error)\n", stderr)
+      throw ExitCode(1)
+    }
+
     // Placeholder: delegate to TNCore Engine (to be implemented).
     try await Engine.post(payload: payload, logger: log)
   }
 }
 
 struct ListCmd: AsyncParsableCommand {
-  static var configuration = CommandConfiguration(abstract: "List delivered notifications.")
+  static let configuration = CommandConfiguration(commandName: "list", abstract: "List delivered notifications.")
   @Argument(help: "Group ID or ALL")
   var group: String = "ALL"
   mutating func run() async throws {
@@ -257,7 +222,7 @@ struct ListCmd: AsyncParsableCommand {
 }
 
 struct Remove: AsyncParsableCommand {
-  static var configuration = CommandConfiguration(abstract: "Remove delivered notifications.")
+  static let configuration = CommandConfiguration(abstract: "Remove delivered notifications.")
   @Argument(help: "Group ID or ALL")
   var group: String
   mutating func run() async throws {
@@ -266,12 +231,12 @@ struct Remove: AsyncParsableCommand {
 }
 
 struct Profiles: ParsableCommand {
-  static var configuration = CommandConfiguration(abstract: "Manage sender profiles (shim bundles).")
+  static let configuration = CommandConfiguration(abstract: "Manage sender profiles (shim bundles).")
   func run() throws { print("Use: tn profiles [list|install NAME|doctor [NAME]]") }
 }
 
 struct Doctor: ParsableCommand {
-  static var configuration = CommandConfiguration(abstract: "Diagnose authorization/entitlement state.")
+  static let configuration = CommandConfiguration(abstract: "Diagnose authorization/entitlement state.")
   func run() throws { print("doctor: checks authorization, entitlements, and focus config") }
 }
 

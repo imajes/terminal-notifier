@@ -1,6 +1,6 @@
 import Foundation
 
-public enum InterruptionLevel: String {
+public enum InterruptionLevel: String, Codable {
   case passive, active, timeSensitive
   public init?(from s: String?) {
     guard let s = s else { return nil }

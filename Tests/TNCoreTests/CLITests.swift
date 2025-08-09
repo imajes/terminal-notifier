@@ -1,6 +1,8 @@
 import Foundation
 import Testing
 
+private enum TestErr: Error { case message(String) }
+
 @Suite struct CLITests {
   func tnPath() throws -> String {
     let cwd = FileManager.default.currentDirectoryPath
@@ -12,7 +14,7 @@ import Testing
     for p in candidates where FileManager.default.isExecutableFile(atPath: p) {
       return p
     }
-    throw TestError.message("tn binary not found in .build; run `swift build` first.")
+    throw TestErr.message("tn binary not found in .build; run `swift build` first.")
   }
 
   @discardableResult
@@ -102,6 +104,18 @@ import Testing
     let r = try runTN(["send", "--message", "ok", "--interruption-level", "bogus"]) 
     #expect(r.exit == 2)
     #expect(r.err.contains("invalid --interruption-level"))
+  }
+
+  @Test func invalid_open_url_exit2() async throws {
+    let r = try runTN(["send", "--message", "ok", "--open", "foo://bar"]) 
+    #expect(r.exit == 2)
+    #expect(r.err.contains("invalid --open URL"))
+  }
+
+  @Test func missing_attachment_exit2() async throws {
+    let r = try runTN(["send", "--message", "ok", "--content-image", "/no/such/file.png"]) 
+    #expect(r.exit == 2)
+    #expect(r.err.contains("content image not found"))
   }
 
   @Test func removed_ignoreDnD_is_error() async throws {

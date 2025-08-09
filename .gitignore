@@ -85,3 +85,6 @@ docs/
 # Vim/Emacs backups
 *~
 
+.home
+err.txt
+out.txt
