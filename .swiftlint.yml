@@ -81,14 +81,7 @@ identifier_name:
   max_length: 50
   excluded:
     - id
-    - x
-    - y
-    - z
-    - i
-    - j
-    - k
     - fd
-    - cg
     - tn
 
 trailing_whitespace:
