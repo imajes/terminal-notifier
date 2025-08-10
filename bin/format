@@ -8,8 +8,18 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
-# Find the Apple swift-format binary via xcrun (added on line 9 per repo notes)
-SWIFT_FORMAT_BIN=$(xcrun --find swift-format 2>/dev/null || true)
+# Resolve swift-format binary:
+# 1) Respect SWIFT_FORMAT_BIN if provided
+# 2) Try `xcrun --find swift-format` (Xcode CLTs)
+# 3) Fallback to `swift-format` on PATH
+if [[ -n "${SWIFT_FORMAT_BIN:-}" && -x "${SWIFT_FORMAT_BIN}" ]]; then
+  true
+else
+  SWIFT_FORMAT_BIN=$(xcrun --find swift-format 2>/dev/null || true)
+  if [[ -z "${SWIFT_FORMAT_BIN}" || ! -x "${SWIFT_FORMAT_BIN}" ]]; then
+    SWIFT_FORMAT_BIN=$(command -v swift-format 2>/dev/null || true)
+  fi
+fi
 
 # Prefer a repo config for swift-format if present.
 # Search common names, fall back to the provided default config in the repo.
@@ -32,8 +42,8 @@ PATHS=()
 [[ -f "$ROOT_DIR/Package.swift" ]] && PATHS+=("$ROOT_DIR/Package.swift")
 
 if [[ -z "${SWIFT_FORMAT_BIN}" || ! -x "${SWIFT_FORMAT_BIN}" ]]; then
-  echo "swift-format (Apple) not found via xcrun. Ensure Xcode command-line tools are installed." >&2
-  echo "Hint: xcode-select --install" >&2
+  echo "swift-format not found. Ensure Apple's swift-format is installed." >&2
+  echo "Hint: Xcode CLTs (xcode-select --install) or a swift-format binary on PATH." >&2
   exit 127
 fi
 

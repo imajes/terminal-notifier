@@ -8,7 +8,7 @@ Once complete, work towards the next milestone, as defined in our AGENT_STEPS.md
 
 You will not get permission to escalate or bypass sandbox permissions. You should not ask.
 
-building swift package code is tricky as it will attempt to access files external to your sandbox. Instead, you should look to utilize arguments and ENV variables that allow you to stage the build environment entirely within your sandbox. Look at bin/build-local.sh for a starting point on this.
+building swift package code is tricky as it will attempt to access files external to your sandbox. Instead, you should look to utilize arguments and ENV variables that allow you to stage the build environment entirely within your sandbox. Look at bin/spm for a starting point on this.
 
 **ALWAYS**:
 

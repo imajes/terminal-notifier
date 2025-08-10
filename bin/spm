@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Sandbox-safe Swift build/test/run wrapper.
+# - Forces HOME, TMPDIR, and module caches inside the workspace
+# - Avoids writing to system locations blocked by the sandbox
+
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+mkdir -p "$ROOT_DIR/.home/.cache/clang/ModuleCache"
+mkdir -p "$ROOT_DIR/.build/clang-module-cache"
+mkdir -p "$ROOT_DIR/.build/swift-module-cache"
+mkdir -p "$ROOT_DIR/.tmp"
+
+export HOME="${HOME_OVERRIDE:-$ROOT_DIR/.home}"
+export TMPDIR="${TMPDIR_OVERRIDE:-$ROOT_DIR/.tmp}"
+export MODULE_CACHE_DIR="$ROOT_DIR/.build/clang-module-cache"
+export CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/clang-module-cache"
+export SWIFT_MODULECACHE_PATH="$ROOT_DIR/.build/swift-module-cache"
+
+CMD=${1:-build}
+shift || true
+
+case "$CMD" in
+  build)
+    exec swift build \
+      -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
+      -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH "$@"
+    ;;
+  test)
+    # Ensure executables (tn) are built so CLI tests can find them
+    swift build \
+      -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
+      -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH
+    exec swift test \
+      -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
+      -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH "$@"
+    ;;
+  run)
+    # Default target to 'tn' if none provided; pass remaining args to the target
+    target="${1:-tn}"; shift || true
+    exec swift run \
+      -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
+      -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH \
+      "$target" -- "$@"
+    ;;
+  run-release)
+    target="${1:-tn}"; shift || true
+    exec swift run -c release \
+      -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
+      -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH \
+      "$target" -- "$@"
+    ;;
+  release)
+    exec swift build -c release \
+      -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
+      -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH "$@"
+    ;;
+  clean)
+    # Keep it local to workspace; avoid `swift package reset` to prevent network touches
+    rm -rf "$ROOT_DIR/.build" \
+           "$ROOT_DIR/.home/.cache/clang/ModuleCache" \
+           "$ROOT_DIR/.build/clang-module-cache" \
+           "$ROOT_DIR/.build/swift-module-cache" \
+           "$ROOT_DIR/.tmp"
+    mkdir -p "$ROOT_DIR/.home/.cache/clang/ModuleCache" \
+             "$ROOT_DIR/.build/clang-module-cache" \
+             "$ROOT_DIR/.build/swift-module-cache" \
+             "$ROOT_DIR/.tmp"
+    ;;
+  *)
+    echo "Usage: bin/spm [build|test|run [target]|run-release [target]|release|clean] [swift-args...]" >&2
+    exit 2
+    ;;
+esac
+
