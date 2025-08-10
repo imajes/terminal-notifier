@@ -1,5 +1,7 @@
 # AGENTS.md — Repo Rules for Autonomous Agents
 
+This document is the authoritative source of truth for **any agent**—human or artificial—interacting within this repository. It merges and supersedes guidance from other internal standards. If an instruction appears to conflict with another document, **AGENTS.md wins**.
+
 ## Context
 
 - SwiftPM repo (Swift 5.10+/6, macOS 13+).
@@ -33,6 +35,8 @@
 - Error handling: `throws` → map to exit codes.
 - Public APIs documented; follow `swift-format` config.
 - CLI glue in `Sources/tn`, core logic in `Sources/TNCore`.
+- Add validation, proper exit codes, and tests for both the modern and legacy interfaces as described in the spec.
+- Follow Swift style conventions (argument-parser idioms, async/await, throwing errors), document public APIs, and ensure all new code is covered by Swift Testing unit tests.
 - After each phase of work, or similar stopping point, run lint/format to ensure that we keep aligned to swift style standards. Work to reduce lint errors wherever possible.
 
 ## Testing
