@@ -1,5 +1,68 @@
 import Foundation
 
+// Public validation error type used by CLI and tests
+public enum TNValidationError: Error, Equatable, CustomStringConvertible {
+  case invalidOpenURL(String)
+  case attachmentNotFound(String)
+  case attachmentTooLarge(String, Int64, Int64)
+  case invalidWaitSeconds(Int)
+
+  public var description: String {
+    switch self {
+    case .invalidOpenURL(let s):
+      return "invalid --open URL: \(s)"
+    case .attachmentNotFound(let path):
+      return "content image not found: \(path)"
+    case .attachmentTooLarge(let path, let size, let max):
+      return "content image too large: \(path) (\(size) > \(max) bytes)"
+    case .invalidWaitSeconds(let v):
+      return "invalid --wait seconds: \(v)"
+    }
+  }
+}
+
+public enum Validation {
+  // ~10 MB default limit for attachments
+  public static let maxAttachmentSizeBytes: Int64 = 10 * 1024 * 1024
+
+  public static func validate(_ payload: NotificationPayload) throws {
+    // Validate --open URL if provided
+    if let open = payload.openURL, !open.isEmpty {
+      if let url = URL(string: open), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) {
+        // ok
+      } else if FileManager.default.fileExists(atPath: open) {
+        // Treat as local path without scheme; allowed
+      } else {
+        throw TNValidationError.invalidOpenURL(open)
+      }
+    }
+
+    // Validate content image if provided
+    if let image = payload.contentImage, !image.isEmpty {
+      if let url = URL(string: image), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) {
+        // Remote URL allowed; size checked by shim at download time
+      } else {
+        // Local path must exist and be within size limit
+        var isDir: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: image, isDirectory: &isDir)
+        if !exists || isDir.boolValue {
+          throw TNValidationError.attachmentNotFound(image)
+        }
+        let attrs = try? FileManager.default.attributesOfItem(atPath: image)
+        let size = (attrs?[.size] as? NSNumber)?.int64Value ?? 0
+        if size > maxAttachmentSizeBytes {
+          throw TNValidationError.attachmentTooLarge(image, size, maxAttachmentSizeBytes)
+        }
+      }
+    }
+
+    // Validate wait seconds when specified
+    if let wait = payload.waitSeconds {
+      if wait <= 0 { throw TNValidationError.invalidWaitSeconds(wait) }
+    }
+  }
+}
+
 /// Errors that may occur while validating a notification payload.
 public enum TNValidationError: Error, CustomStringConvertible, Equatable {
   case emptyMessage

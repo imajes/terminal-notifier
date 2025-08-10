@@ -9,7 +9,7 @@ struct TNCommand: AsyncParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "tn",
     abstract: "Post macOS notifications from the terminal.",
-    discussion: "Use modern subcommands (e.g. 'tn send') or legacy top-level flags (e.g. '-message', '-title').",
+    discussion: "Use modern subcommands (e.g. 'tn send') or legacy top-level flags for compatibility (e.g. '-message', '-title', '-subtitle', '-group', '-open', '-execute', '-activate', '-contentImage', '-sender', '-wait').",
     version: VersionInfo.string,
     subcommands: [Send.self, ListCmd.self, Remove.self, Profiles.self, Doctor.self],
     helpNames: [.long, .short]
