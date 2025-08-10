@@ -12,6 +12,10 @@ This document is the authoritative source of truth for **any agent**—human or 
 - **SPECIFICATION.md**: functional/technical requirements.
 - **AGENT_STEPS.md**: current build sequence.
 
+### Agent Environment Toggle
+
+- `TN_AGENT_DISABLE_SWIFT_SANDBOX=1`: When set, `bin/spm` passes `--disable-sandbox` to `swift run` and `swift test`. This avoids double-sandboxing in agent harnesses so builds/tests run entirely within the workspace. Humans should not set this for normal local development.
+
 ### Useful commands
 
 - `swift build` / `swift build -c release`

@@ -17,6 +17,16 @@ export MODULE_CACHE_DIR="$ROOT_DIR/.build/clang-module-cache"
 export CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/clang-module-cache"
 export SWIFT_MODULECACHE_PATH="$ROOT_DIR/.build/swift-module-cache"
 
+# If running under an agent harness, optionally disable SwiftPM sandboxing
+# for commands that execute code (run/test). This helps avoid double-sandboxing
+# when the outer environment is already sandboxed.
+# Opt-in via TN_AGENT_DISABLE_SWIFT_SANDBOX=1 (documented in AGENTS.md).
+disable_flag=()
+case "${TN_AGENT_DISABLE_SWIFT_SANDBOX:-}" in
+  1|true|yes|on) disable_flag=("--disable-sandbox");;
+  *) ;; # default: leave sandboxing as-is
+esac
+
 CMD=${1:-build}
 shift || true
 
@@ -31,21 +41,21 @@ case "$CMD" in
     swift build \
       -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
       -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH
-    exec swift test \
+    exec swift test ${disable_flag[@]} \
       -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
       -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH "$@"
     ;;
   run)
     # Default target to 'tn' if none provided; pass remaining args to the target
     target="${1:-tn}"; shift || true
-    exec swift run \
+    exec swift run ${disable_flag[@]} \
       -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
       -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH \
       "$target" -- "$@"
     ;;
   run-release)
     target="${1:-tn}"; shift || true
-    exec swift run -c release \
+    exec swift run ${disable_flag[@]} -c release \
       -Xcc -fmodules-cache-path=$MODULE_CACHE_DIR \
       -Xswiftc -module-cache-path -Xswiftc $SWIFT_MODULECACHE_PATH \
       "$target" -- "$@"
@@ -72,4 +82,3 @@ case "$CMD" in
     exit 2
     ;;
 esac
-
