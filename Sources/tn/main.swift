@@ -5,7 +5,7 @@ import Logging
 import TNCore
 
 @main
-struct TN: AsyncParsableCommand {
+struct TNCommand: AsyncParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "tn",
     abstract: "Post macOS notifications from the terminal.",
@@ -34,8 +34,8 @@ struct TN: AsyncParsableCommand {
       } else {
         try command.run()
       }
-    } catch let e as ExitCode {
-      Self.exit(withError: e)
+    } catch let exitCode as ExitCode {
+      Self.exit(withError: exitCode)
     } catch {
       // Delegate printing/exit code mapping to ArgumentParser.
       Self.exit(withError: error)
@@ -58,13 +58,13 @@ struct TN: AsyncParsableCommand {
 
     // Normalize legacy single-dash long options to `--` form for send.
     var normalized: [String] = []
-    var i = 0
-    while i < tokens.count {
-      let tok = tokens[i]
+    var index = 0
+    while index < tokens.count {
+      let tok = tokens[index]
       if tok == "-list" || tok == "-remove" {
         // Handle later in dispatch.
         normalized.append(tok)
-        i += 1
+        index += 1
         continue
       }
       if tok.hasPrefix("-") && !tok.hasPrefix("--") {
@@ -77,12 +77,12 @@ struct TN: AsyncParsableCommand {
         ]
         if legacyLongs.contains(name) {
           normalized.append("--" + name)
-          i += 1
+          index += 1
           continue
         }
       }
       normalized.append(tok)
-      i += 1
+      index += 1
     }
 
     // Determine if user already chose a modern subcommand.
@@ -183,9 +183,9 @@ struct Send: AsyncParsableCommand {
 
     // Validate interruption level if provided
     var level: InterruptionLevel = .active
-    if let s = interruption {
-      guard let parsed = InterruptionLevel(from: s) else {
-        fputs("error: invalid --interruption-level: \(s)\n", stderr)
+    if let levelString = interruption {
+      guard let parsed = InterruptionLevel(from: levelString) else {
+        fputs("error: invalid --interruption-level: \(levelString)\n", stderr)
         throw ExitCode(2)
       }
       level = parsed
@@ -226,6 +226,7 @@ struct ListCmd: AsyncParsableCommand {
   static let configuration = CommandConfiguration(commandName: "list", abstract: "List delivered notifications.")
   @Argument(help: "Group ID or ALL")
   var group: String = "ALL"
+  
   mutating func run() async throws {
     try await Engine.list(group: group)
   }
@@ -235,6 +236,7 @@ struct Remove: AsyncParsableCommand {
   static let configuration = CommandConfiguration(abstract: "Remove delivered notifications.")
   @Argument(help: "Group ID or ALL")
   var group: String
+  
   mutating func run() async throws {
     try await Engine.remove(group: group)
   }
@@ -259,6 +261,7 @@ struct ProfilesList: ParsableCommand {
 struct ProfilesInstall: ParsableCommand {
   static let configuration = CommandConfiguration(abstract: "Install a profile.")
   @Argument var name: String
+  
   func run() throws {
     let info = try ProfilesManager.install(name: name)
     print(info.path)
@@ -268,6 +271,7 @@ struct ProfilesInstall: ParsableCommand {
 struct ProfilesDoctor: ParsableCommand {
   static let configuration = CommandConfiguration(abstract: "Doctor profiles state.")
   @Argument var name: String?
+  
   func run() throws {
     let out = try ProfilesManager.doctor(name: name)
     print(out)

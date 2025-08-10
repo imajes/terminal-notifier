@@ -12,14 +12,14 @@ public enum TNValidationError: Error, CustomStringConvertible, Equatable {
     switch self {
     case .emptyMessage:
       return "message is required (use --message or pipe stdin)"
-    case .invalidOpenURL(let s):
-      return "invalid --open URL: \(s)"
-    case .attachmentNotFound(let p):
-      return "content image not found: \(p)"
+    case .invalidOpenURL(let openURL):
+      return "invalid --open URL: \(openURL)"
+    case .attachmentNotFound(let path):
+      return "content image not found: \(path)"
     case .attachmentTooLarge(let path, let size, let max):
       return "content image too large (\(size) > \(max) bytes): \(path)"
-    case .invalidWaitSeconds(let v):
-      return "invalid --wait value (must be > 0): \(v)"
+    case .invalidWaitSeconds(let value):
+      return "invalid --wait value (must be > 0): \(value)"
     }
   }
 }
@@ -37,14 +37,14 @@ public enum Validation {
     guard !trimmed.isEmpty else { throw TNValidationError.emptyMessage }
 
     // Open URL
-    if let s = payload.openURL {
-      guard let schemeRange = s.range(of: "://") else {
-        throw TNValidationError.invalidOpenURL(s)
+    if let openURL = payload.openURL {
+      guard let schemeRange = openURL.range(of: "://") else {
+        throw TNValidationError.invalidOpenURL(openURL)
       }
-      let scheme = String(s[..<schemeRange.lowerBound]).lowercased()
+      let scheme = String(openURL[..<schemeRange.lowerBound]).lowercased()
       let allowed = Set(["http", "https", "file"])
       if !allowed.contains(scheme) {
-        throw TNValidationError.invalidOpenURL(s)
+        throw TNValidationError.invalidOpenURL(openURL)
       }
     }
 
@@ -64,8 +64,8 @@ public enum Validation {
     }
 
     // Wait seconds
-    if let w = payload.waitSeconds, w <= 0 {
-      throw TNValidationError.invalidWaitSeconds(w)
+    if let wait = payload.waitSeconds, wait <= 0 {
+      throw TNValidationError.invalidWaitSeconds(wait)
     }
   }
 

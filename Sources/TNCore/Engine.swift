@@ -18,11 +18,13 @@ public enum Engine {
     } else {
       // Stub output for now.
       logger.info("POST \(payload.title) :: \(payload.message) (group=\(payload.groupID ?? "nil"))")
-      FileHandle.standardOutput.write(
-        ("posted\t\(payload.groupID ?? "")\t\(payload.title)\t\(payload.subtitle ?? "")\t\(payload.message)\n").data(
-          using: .utf8
-        )!
-      )
+      let line = "posted\t\(payload.groupID ?? "")\t\(payload.title)\t\(payload.subtitle ?? "")\t\(payload.message)\n"
+      if let data = line.data(using: .utf8) {
+        FileHandle.standardOutput.write(data)
+      } else {
+        // Fallback: should never happen for UTF-8, but avoid force unwrap.
+        print(line, terminator: "")
+      }
     }
   }
 

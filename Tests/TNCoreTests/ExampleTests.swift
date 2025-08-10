@@ -2,8 +2,9 @@ import Testing
 
 @testable import TNCore
 
-@Test func payload_init() async throws {
-  let p = NotificationPayload(
+@Test
+func payload_init() async throws {
+  let payload = NotificationPayload(
     title: "T",
     subtitle: nil,
     message: "M",
@@ -17,5 +18,5 @@ import Testing
     interruptionLevel: .active,
     waitSeconds: nil
   )
-  #expect(p.title == "T")
+  #expect(payload.title == "T")
 }

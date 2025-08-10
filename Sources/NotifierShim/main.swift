@@ -9,93 +9,93 @@ struct NotifierShimMain {
   static func main() async throws {
     let log = Logger(label: "tn.shim")
     let sock = ProcessInfo.processInfo.environment["TN_SHIM_SOCKET"] ?? "/tmp/tn-shim.sock"
-    unlink(sock)
+    let fd = try openServerSocket(at: sock)
+    log.info("shim listening at \(sock)")
+
+    // Simple accept loop: handle one request per connection, reply, close.
+    while true { try await acceptAndServe(from: fd) }
+  }
+
+  private static func openServerSocket(at path: String) throws -> Int32 {
+    unlink(path)
     let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else { fatalError("socket() failed") }
     var addr = sockaddr_un()
-    let cstr = sock.utf8CString
+    let cstr = path.utf8CString
     #if os(macOS)
       addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
     #endif
     addr.sun_family = sa_family_t(AF_UNIX)
     withUnsafeMutableBytes(of: &addr.sun_path) { raw in _ = raw.initializeMemory(as: CChar.self, from: cstr) }
-    let addrLen = socklen_t(MemoryLayout.offset(of: \sockaddr_un.sun_path)!) + socklen_t(cstr.count)
+    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
     let bindRes = withUnsafePointer(to: &addr) { ptr -> Int32 in
       ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sp in
         Darwin.bind(fd, sp, addrLen)
       }
     }
     guard bindRes == 0, Darwin.listen(fd, 16) == 0 else { fatalError("bind/listen failed") }
-    log.info("shim listening at \(sock)")
+    return fd
+  }
 
-    // Delegate/callbacks for clicks will be added later with LSUIElement app.
-
-    // Simple accept loop: handle one request per connection, reply, close.
-    while true {
-      var addr2 = sockaddr()
-      var len = socklen_t(MemoryLayout<sockaddr>.size)
-      let cfd = withUnsafeMutablePointer(to: &addr2) { ap in
-        ap.withMemoryRebound(to: sockaddr.self, capacity: 1) { sp in
-          Darwin.accept(fd, sp, &len)
-        }
+  private static func acceptAndServe(from fd: Int32) async throws {
+    var addr2 = sockaddr()
+    var len = socklen_t(MemoryLayout<sockaddr>.size)
+    let cfd = withUnsafeMutablePointer(to: &addr2) { ap in
+      ap.withMemoryRebound(to: sockaddr.self, capacity: 1) { sp in
+        Darwin.accept(fd, sp, &len)
       }
-      if cfd < 0 { continue }
-      // Read header
-      var header = [UInt8](repeating: 0, count: 4)
-      let r1 = header.withUnsafeMutableBytes { Darwin.read(cfd, $0.baseAddress, 4) }
-      if r1 != 4 {
-        Darwin.close(cfd)
-        continue
-      }
-      let length = header.withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian
-      var body = Data(count: Int(length))
-      let r2 = body.withUnsafeMutableBytes { Darwin.read(cfd, $0.baseAddress, Int(length)) }
-      if r2 != Int(length) {
-        Darwin.close(cfd)
-        continue
-      }
-
-      // Try to decode known requests
-      var correlation: UUID?
-      var result = Result(correlationID: correlation, status: "ok")
-      if let req: SendRequest = try? FrameIO.decode(body) {
-        correlation = req.correlationID
-        result.correlationID = correlation
-        do {
-          try await Notifier.shared.post(payload: req.payload)
-          result.status = "ok"
-        } catch let e as Notifier.Error {
-          switch e {
-          case .notAuthorized:
-            result.status = "not_authorized"
-            result.message = "notifications not authorized"
-          case .invalidAttachment(let m):
-            result.status = "invalid_attachment"
-            result.message = m
-          case .runtime(let m):
-            result.status = "runtime_error"
-            result.message = m
-          }
-        } catch {
-          result.status = "runtime_error"
-          result.message = String(describing: error)
-        }
-      } else if let req: ListRequest = try? FrameIO.decode(body) {
-        correlation = req.correlationID
-        result.correlationID = correlation
-        let tsv = try await Notifier.shared.list(group: req.group)
-        result.status = "ok"
-        result.message = tsv
-      } else if let req: RemoveRequest = try? FrameIO.decode(body) {
-        correlation = req.correlationID
-        result.correlationID = correlation
-        try await Notifier.shared.remove(group: req.group)
-        result.status = "ok"
-      }
-      let ok = try FrameIO.encode(result)
-      _ = ok.withUnsafeBytes { Darwin.write(cfd, $0.baseAddress, ok.count) }
-      Darwin.close(cfd)
     }
+    if cfd < 0 { return }
+    defer { Darwin.close(cfd) }
+
+    // Read header
+    var header = [UInt8](repeating: 0, count: 4)
+    let r1 = header.withUnsafeMutableBytes { Darwin.read(cfd, $0.baseAddress, 4) }
+    guard r1 == 4 else { return }
+    let length = header.withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian
+    var body = Data(count: Int(length))
+    let r2 = body.withUnsafeMutableBytes { Darwin.read(cfd, $0.baseAddress, Int(length)) }
+    guard r2 == Int(length) else { return }
+
+    // Try to decode known requests
+    var correlation: UUID?
+    var result = Result(correlationID: correlation, status: "ok")
+    if let req: SendRequest = try? FrameIO.decode(body) {
+      correlation = req.correlationID
+      result.correlationID = correlation
+      do {
+        try await Notifier.shared.post(payload: req.payload)
+        result.status = "ok"
+      } catch let notifierError as Notifier.Error {
+        switch notifierError {
+        case .notAuthorized:
+          result.status = "not_authorized"
+          result.message = "notifications not authorized"
+        case .invalidAttachment(let message):
+          result.status = "invalid_attachment"
+          result.message = message
+        case .runtime(let message):
+          result.status = "runtime_error"
+          result.message = message
+        }
+      } catch {
+        result.status = "runtime_error"
+        result.message = String(describing: error)
+      }
+    } else if let req: ListRequest = try? FrameIO.decode(body) {
+      correlation = req.correlationID
+      result.correlationID = correlation
+      let tsv = try await Notifier.shared.list(group: req.group)
+      result.status = "ok"
+      result.message = tsv
+    } else if let req: RemoveRequest = try? FrameIO.decode(body) {
+      correlation = req.correlationID
+      result.correlationID = correlation
+      try await Notifier.shared.remove(group: req.group)
+      result.status = "ok"
+    }
+    let ok = try FrameIO.encode(result)
+    _ = ok.withUnsafeBytes { Darwin.write(cfd, $0.baseAddress, ok.count) }
   }
 }
 
@@ -140,9 +140,9 @@ actor Notifier {
 
     let content = UNMutableNotificationContent()
     content.title = payload.title
-    if let s = payload.subtitle { content.subtitle = s }
+    if let subtitle = payload.subtitle { content.subtitle = subtitle }
     content.body = payload.message
-    if let g = payload.groupID { content.threadIdentifier = g }
+    if let groupID = payload.groupID { content.threadIdentifier = groupID }
     if let snd = payload.sound {
       if snd == "default" {
         content.sound = .default
@@ -176,13 +176,13 @@ actor Notifier {
 
   func list(group: String) async throws -> String {
     let delivered = await UNUserNotificationCenter.current().deliveredNotifications()
-    let items = delivered.filter { n in
+    let items = delivered.filter { notification in
       if group == "ALL" { return true }
-      return n.request.content.threadIdentifier == group
+      return notification.request.content.threadIdentifier == group
     }
-    let rows = items.map { n in
-      let c = n.request.content
-      return "\(c.threadIdentifier)\t\(c.title)\t\(c.subtitle)\t\(c.body)\t\(n.date)"
+    let rows = items.map { notification in
+      let content = notification.request.content
+      return "\(content.threadIdentifier)\t\(content.title)\t\(content.subtitle)\t\(content.body)\t\(notification.date)"
     }
     return "group\ttitle\tsubtitle\tmessage\tdeliveredAt\n" + rows.joined(separator: "\n")
   }

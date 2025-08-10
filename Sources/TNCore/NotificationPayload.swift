@@ -2,9 +2,9 @@ import Foundation
 
 public enum InterruptionLevel: String, Codable {
   case passive, active, timeSensitive
-  public init?(from s: String?) {
-    guard let s else { return nil }
-    self.init(rawValue: s)
+  public init?(from string: String?) {
+    guard let string else { return nil }
+    self.init(rawValue: string)
   }
 }
 

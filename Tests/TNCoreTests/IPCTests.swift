@@ -3,8 +3,10 @@ import Testing
 
 @testable import TNCore
 
-@Suite struct IPCTests {
-  @Test func frame_round_trip_send_request() async throws {
+@Suite
+struct IPCTests {
+  @Test
+  func frame_round_trip_send_request() async throws {
     let payload = NotificationPayload(
       title: "T",
       subtitle: nil,
@@ -30,7 +32,8 @@ import Testing
     #expect(decoded == req)
   }
 
-  @Test func frame_accumulator_handles_partial_reads() async throws {
+  @Test
+  func frame_accumulator_handles_partial_reads() async throws {
     let payload = NotificationPayload(
       title: "T2",
       subtitle: "S",
@@ -61,11 +64,11 @@ import Testing
       let frames = acc.feed(Data(chunk))
       for frame in frames {
         if decoded.isEmpty {
-          let s: SendRequest = try FrameIO.decode(frame)
-          decoded.append(s)
+          let sendRequest: SendRequest = try FrameIO.decode(frame)
+          decoded.append(sendRequest)
         } else {
-          let r: Result = try FrameIO.decode(frame)
-          decoded.append(r)
+          let result: Result = try FrameIO.decode(frame)
+          decoded.append(result)
         }
       }
     }

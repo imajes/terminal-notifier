@@ -3,7 +3,8 @@ import Testing
 
 @testable import TNCore
 
-@Suite struct ValidationTests {
+@Suite
+struct ValidationTests {
   func tmpFile(size: Int) throws -> String {
     let dir = FileManager.default.temporaryDirectory
     let url = dir.appendingPathComponent(UUID().uuidString)
@@ -12,7 +13,8 @@ import Testing
     return url.path
   }
 
-  @Test func openURL_scheme_validation() async throws {
+  @Test
+  func openURL_scheme_validation() async throws {
     let good = NotificationPayload(
       title: "T",
       subtitle: nil,
@@ -44,14 +46,15 @@ import Testing
       waitSeconds: nil
     )
     var threw = false
-    do { try Validation.validate(bad) } catch let e as TNValidationError {
+    do { try Validation.validate(bad) } catch let error as TNValidationError {
       threw = true
-      #expect(e == .invalidOpenURL("foo://bar"))
+      #expect(error == .invalidOpenURL("foo://bar"))
     }
     #expect(threw)
   }
 
-  @Test func content_image_local_checks() async throws {
+  @Test
+  func content_image_local_checks() async throws {
     // Small file ok
     let smallPath = try tmpFile(size: 1024)
     let p1 = NotificationPayload(
@@ -87,9 +90,9 @@ import Testing
       waitSeconds: nil
     )
     var threwMissing = false
-    do { try Validation.validate(p2) } catch let e as TNValidationError {
+    do { try Validation.validate(p2) } catch let error as TNValidationError {
       threwMissing = true
-      switch e {
+      switch error {
       case .attachmentNotFound(let path): #expect(path == missingPath)
       default: #expect(false)
       }
@@ -114,9 +117,9 @@ import Testing
       waitSeconds: nil
     )
     var threwLarge = false
-    do { try Validation.validate(p3) } catch let e as TNValidationError {
+    do { try Validation.validate(p3) } catch let error as TNValidationError {
       threwLarge = true
-      switch e {
+      switch error {
       case .attachmentTooLarge(let path, _, _): #expect(path == bigPath)
       default: #expect(false)
       }
@@ -124,7 +127,8 @@ import Testing
     #expect(threwLarge)
   }
 
-  @Test func wait_seconds_validation() async throws {
+  @Test
+  func wait_seconds_validation() async throws {
     let bad = NotificationPayload(
       title: "T",
       subtitle: nil,
@@ -140,10 +144,10 @@ import Testing
       waitSeconds: 0
     )
     var threwWait = false
-    do { try Validation.validate(bad) } catch let e as TNValidationError {
+    do { try Validation.validate(bad) } catch let error as TNValidationError {
       threwWait = true
-      switch e {
-      case .invalidWaitSeconds(let v): #expect(v == 0)
+      switch error {
+      case .invalidWaitSeconds(let value): #expect(value == 0)
       default: #expect(false)
       }
     }

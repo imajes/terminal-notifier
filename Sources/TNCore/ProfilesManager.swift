@@ -21,33 +21,33 @@ public enum ProfilesManager {
   public static func list() throws -> [ProfileInfo] {
     try ensureBase()
     return known.map { name in
-      let p = baseDir().appendingPathComponent(name, isDirectory: true)
-      let installed = FileManager.default.fileExists(atPath: p.path)
-      return ProfileInfo(name: name, installed: installed, path: p.path)
+      let profileDir = baseDir().appendingPathComponent(name, isDirectory: true)
+      let installed = FileManager.default.fileExists(atPath: profileDir.path)
+      return ProfileInfo(name: name, installed: installed, path: profileDir.path)
     }
   }
 
   @discardableResult
   public static func install(name: String) throws -> ProfileInfo {
     try ensureBase()
-    let p = baseDir().appendingPathComponent(name, isDirectory: true)
-    if !FileManager.default.fileExists(atPath: p.path) {
-      try FileManager.default.createDirectory(at: p, withIntermediateDirectories: true)
+    let profileDir = baseDir().appendingPathComponent(name, isDirectory: true)
+    if !FileManager.default.fileExists(atPath: profileDir.path) {
+      try FileManager.default.createDirectory(at: profileDir, withIntermediateDirectories: true)
       // Placeholder to indicate presence; real shim app comes in Step 5.
-      let marker = p.appendingPathComponent("shim.placeholder")
+      let marker = profileDir.appendingPathComponent("shim.placeholder")
       FileManager.default.createFile(atPath: marker.path, contents: Data("shim".utf8))
     }
-    return ProfileInfo(name: name, installed: true, path: p.path)
+    return ProfileInfo(name: name, installed: true, path: profileDir.path)
   }
 
   @discardableResult
   public static func doctor(name: String?) throws -> String {
-    let list = try self.list()
-    guard let n = name else {
-      return list.map { "\($0.name)\tinstalled=\($0.installed)\tpath=\($0.path)" }.joined(separator: "\n")
+    let all = try self.list()
+    guard let selectedName = name else {
+      return all.map { "\($0.name)\tinstalled=\($0.installed)\tpath=\($0.path)" }.joined(separator: "\n")
     }
-    guard let info = list.first(where: { $0.name == n }) else {
-      return "unknown profile: \(n)"
+    guard let info = all.first(where: { $0.name == selectedName }) else {
+      return "unknown profile: \(selectedName)"
     }
     return "\(info.name)\tinstalled=\(info.installed)\tpath=\(info.path)"
   }
